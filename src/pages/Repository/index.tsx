@@ -1,16 +1,64 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouteMatch, Link } from 'react-router-dom';
 
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import logoImg from '../../assets/logo.svg';
 
 import { Header, RepositoryInfo, Issues } from './styles';
+import api from '../../services/api';
 
 interface RepositoryParams {
   repository: string;
 }
+
+interface Repository {
+  // Você não precisa tipar tudo
+  full_name: string;
+  description: string;
+  stargazers_count: number;
+  forks_count: number;
+  open_issues_count: number;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+}
+
+interface Issue {
+  id: number;
+  title: string;
+  html_url: string;
+  user: {
+    login: string;
+  };
+}
+
 const Repository: React.FC = () => {
+  const [repository, setRepository] = useState<Repository | null>(null);
+  const [issues, setIssues] = useState<Issue[]>([]);
+
   const { params } = useRouteMatch<RepositoryParams>();
+
+  useEffect(() => {
+    api.get(`repos/${params.repository}`).then((response) => {
+      setRepository(response.data);
+    });
+
+    api.get(`repos/${params.repository}/issues`).then((response) => {
+      setIssues(response.data);
+    });
+
+    // Chamando funções juntas Promise.all
+    // Pegar a primeira que responder Promise.race
+    // (async (): Promise<void> => {
+    //   const [repository, issues] = await Promise.all([
+    //     api.get(`repos/${params.repository}`),
+    //     api.get(`repos/${params.repository}/issues`),
+    //   ]);
+
+    //   console.log(repository, issues);
+    // })();
+  }, [params.repository]);
 
   return (
     <>
@@ -22,42 +70,45 @@ const Repository: React.FC = () => {
         </Link>
       </Header>
 
-      <RepositoryInfo>
-        <header>
-          <img
-            src="https://avatars3.githubusercontent.com/u/19674933?s=400&u=25605340bd05f5fa54f2ac70b316623798e5ddf9&v=4"
-            alt="Cristian Araujo"
-          />
-          <div>
-            <strong>Cristian</strong>
-            <p>descripstions</p>
-          </div>
-        </header>
-        <ul>
-          <li>
-            <strong>92183</strong>
-            <span>Stars</span>
-          </li>
-          <li>
-            <strong>92183</strong>
-            <span>Forks</span>
-          </li>
-          <li>
-            <strong>92183</strong>
-            <span>Issues abertas</span>
-          </li>
-        </ul>
-      </RepositoryInfo>
-
+      {repository && (
+        <RepositoryInfo>
+          <header>
+            <img
+              src={repository.owner.avatar_url}
+              alt={repository.owner.login}
+            />
+            <div>
+              <strong>{repository.full_name}</strong>
+              <p>{repository.description}</p>
+            </div>
+          </header>
+          <ul>
+            <li>
+              <strong>{repository.stargazers_count}</strong>
+              <span>Stars</span>
+            </li>
+            <li>
+              <strong>{repository.forks_count}</strong>
+              <span>Forks</span>
+            </li>
+            <li>
+              <strong>{repository.open_issues_count}</strong>
+              <span>Issues abertas</span>
+            </li>
+          </ul>
+        </RepositoryInfo>
+      )}
       <Issues>
-        <Link to="#ddd">
-          <div>
-            <strong>repository.full_name</strong>
-            <p>repository.description</p>
-          </div>
+        {issues.map((issue) => (
+          <a key={issue.id} href={issue.html_url}>
+            <div>
+              <strong>{issue.title}</strong>
+              <p>{issue.user.login}</p>
+            </div>
 
-          <FiChevronRight size={20} />
-        </Link>
+            <FiChevronRight size={20} />
+          </a>
+        ))}
       </Issues>
     </>
   );
